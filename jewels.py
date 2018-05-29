@@ -113,35 +113,35 @@ class board:
             #print "\n"
             #end debugging
     
-    def horizontalMonoContaining(self, table, coords):
-        #does table contain a horizontal mono containing the entry coords?
-        colour = table[coords[0]][coords[1]]
+    def horizontalMonoContaining(self, coords):
+        #does self.entries contain a horizontal mono containing the entry coords?
+        colour = self.entries[coords[0]][coords[1]]
         l = 0
         while(True):
-            if (coords[1]+l >= width) or (table[coords[0]][coords[1]+l] != colour):
+            if (coords[1]+l >= width) or (self.entries[coords[0]][coords[1]+l] != colour):
                 break
             else:
                 l += 1
         r = 0
         while(True):
-            if (coords[1] - r < 0) or (table[coords[0]][coords[1]-r] != colour):
+            if (coords[1] - r < 0) or (self.entries[coords[0]][coords[1]-r] != colour):
                 break
             else:
                 r += 1
         return (l + r - 1 >= vanishLength)
         
-    def verticalMonoContaining(self, table, coords):
-        #does table contain a vertical mono containing the entry coords?
-        colour = table[coords[0]][coords[1]]
+    def verticalMonoContaining(self, coords):
+        #does self.entries contain a vertical mono containing the entry coords?
+        colour = self.entries[coords[0]][coords[1]]
         d = 0
         while(True):
-            if (coords[0] + d >= height) or (table[coords[0] + d][coords[1]] != colour):
+            if (coords[0] + d >= height) or (self.entries[coords[0] + d][coords[1]] != colour):
                 break
             else:
                 d += 1
         u = 0
         while(True):
-            if (coords[0] - u < 0) or (table[coords[0] - u][coords[1]] != colour):
+            if (coords[0] - u < 0) or (self.entries[coords[0] - u][coords[1]] != colour):
                 break
             else:
                 u += 1
@@ -155,25 +155,22 @@ class board:
             for j in range(width):
                 if (j < width - 1) and (self.entries[i][j] != self.entries[i][j+1]):
                 #it makes sense to swap [i,j] and [i,j+1]. does that create a new mono?
-                    afterSwap = copy.deepcopy(self.entries) #to make a genuine copy which can be modified without changing self.entries. the [:] hack will fail, as will copy.copy
-                    afterSwap[i][j] = self.entries[i][j+1]
-                    afterSwap[i][j+1] = self.entries[i][j]
-                    #now look for monos in tempEntries. There can be four kinds:
+                #copy.deepcopy is really slow, so we'll apply the move, test for monos, then apply it again to get back where we started
+                    self.applyMove([[i,j],[i,j+1]])
+                    #now look for monos. There can be four kinds:
                     # 1. vertical mono containing [i,j+1] of colour entries[i][j]
                     # 2. vertical mono containing [i,j] of colour entries[i][j+1]
                     # 3. horizontal mono finishing at [i,j] of colour entries[i][j+1]
                     # 4. horizontal mono starting at [i,j+1] of colour entries[i][j]
-                    if self.verticalMonoContaining(afterSwap, [i,j+1]) or self.verticalMonoContaining(afterSwap, [i,j]) or self.horizontalMonoContaining(afterSwap, [i,j]) or self.horizontalMonoContaining(afterSwap, [i,j+1]):
-                        #print i,j, " horiz", self.verticalMonoContaining(afterSwap, [i,j+1]), self.verticalMonoContaining(afterSwap, [i,j]), self.horizontalMonoContaining(afterSwap, [i,j]), self.horizontalMonoContaining(afterSwap, [i,j+1])
+                    if self.verticalMonoContaining([i,j+1]) or self.verticalMonoContaining([i,j]) or self.horizontalMonoContaining([i,j]) or self.horizontalMonoContaining([i,j+1]):
                         output.append([[i,j], [i,j+1]])
+                    self.applyMove([[i,j],[i,j+1]]) # get self.entries back to where it was before
                 if (i < height - 1) and (self.entries[i][j] != self.entries[i+1][j]):
                     #it makes sense to swap [i,j] and [i+1,j]. does that create a new mono?
-                    afterSwap = copy.deepcopy(self.entries) # as above :.(
-                    afterSwap[i][j] = self.entries[i+1][j]
-                    afterSwap[i+1][j] = self.entries[i][j]
-                    if self.verticalMonoContaining(afterSwap, [i,j]) or self.verticalMonoContaining(afterSwap,[i+1,j]) or self.horizontalMonoContaining(afterSwap,[i,j]) or self.horizontalMonoContaining(afterSwap, [i+1,j]):
-                        #print i,j, "vert", self.verticalMonoContaining(afterSwap, [i,j]), self.verticalMonoContaining(afterSwap,[i+1,j]), self.horizontalMonoContaining(afterSwap,[i,j]), self.horizontalMonoContaining(afterSwap, [i+1,j])
+                    self.applyMove([[i,j],[i+1,j]])
+                    if self.verticalMonoContaining([i,j]) or self.verticalMonoContaining([i+1,j]) or self.horizontalMonoContaining([i,j]) or self.horizontalMonoContaining([i+1,j]):
                         output.append([[i,j],[i+1,j]])
+                    self.applyMove([[i,j],[i+1,j]])
         return output
     
     def applyMove(self, move):
@@ -210,7 +207,7 @@ for i in range(100):
             break
         b.applyMove(random.choice(moves))
 
-mu = sum(scores)/len(scores)
+mu = sum(scores)/(1.0 * len(scores))
 s2 = sum([(x-mu) ** 2 for x in scores])/ (len(scores)-1)
 print mu, s2 ** 0.5
 # Poisson(100)?
