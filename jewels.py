@@ -184,12 +184,6 @@ class board:
         # mixed
         # approximate the play that maximises something or other
 
-# game loop: create a new board and randomize it, then
-        # evolve
-        # if no move is available, stop and log the score. else
-        # choose and make a move
-
-
 def testStrategy(chooser, numberOfGames):
     #a strategy is a way of choosing moves. testStrategy takes 
     #a function chooser which accepts a list of moves and returns
@@ -235,3 +229,6 @@ r_string = "\nx=c(" + ",".join(map(str, scores)) + ")"
 #use source("scores.txt") in R to load this
 f.write(r_string)
 f.close()
+
+# to do: log number of moves available to get an idea of what the sequences look like
+# make a mixed strategy that plays near the top, but near the bottom when few moves are available
