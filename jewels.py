@@ -11,7 +11,6 @@ numberOfColours = 7 # block colours will be represented by the numbers
 vanishLength = 3 # a collection of at least vanishLength blocks of the same
 #colour in a vertical or horizontal line is called a mono.
 
-#how to keep track of score?
 class board:
     score = 0
     entries = [[0 for i in range(width)] for j in range(height)]
@@ -186,10 +185,10 @@ class board:
 
 def testStrategy(chooser, numberOfGames):
     #a strategy is a way of choosing moves. testStrategy takes 
-    #a function chooser which accepts a list of moves and returns
+    #a function `chooser' which accepts a list of moves and returns
     #one of them, and a number numberOfGames, and runs numberOfGames
-    #games using chooser to pick from the available moves
-    #it returns the list of scores from those games
+    #games using chooser to pick from the available moves.
+    #It returns the list of scores from those games
     scores = []
     for i in range(numberOfGames):
         b = board()
@@ -207,28 +206,71 @@ def testStrategy(chooser, numberOfGames):
     print "n", numberOfGames, "mean", mu, "sd", s2 ** 0.5
     return scores
 
+##########################
+# some chooser functions #
+##########################
 
 def randomChooser(moves):
     return random.choice(moves)
-
-def chooseNearTop(moves):
-    #pick randomly from the 5 moves nearest the top
+def chooseFromTop3(moves):
+    #pick randomly from the 3 moves nearest the top
     movesSortedByRow = sorted(moves, key=lambda x: x[0][0])
-    return random.choice(movesSortedByRow[:5])
-
-def chooseNearBottom(moves):
+    return random.choice(movesSortedByRow[:3])
+def chooseFromTop2(moves):
+    #pick randomly from the 2 moves nearest the top
+    movesSortedByRow = sorted(moves, key=lambda x: x[0][0])
+    return random.choice(movesSortedByRow[:2])
+def chooseTop1(moves):
+    movesSortedByRow = sorted(moves, key=lambda x: x[0][0])
+    return movesSortedByRow[0]
+def chooseFromHighest(moves):
+    #pick randomly from the highest moves
+    movesSortedByRow = sorted(moves, key=lambda x: x[0][0])
+    highestRowWithMoves = movesSortedByRow[0][0][0]
+    highestMoves = [movesSortedByRow[0]]
+    for i in range(1,len(movesSortedByRow)):
+        if movesSortedByRow[i][0][0] == highestRowWithMoves:
+            highestMoves.append(movesSortedByRow[i])
+        else:
+            break
+    return random.choice(highestMoves)
+def chooseLastHighest(moves):
+    movesSortedByRow = sorted(moves, key=lambda x: x[0][0])
+    highestRowWithMoves = movesSortedByRow[0][0][0]
+    highestMoves = [movesSortedByRow[0]]
+    for i in range(1,len(movesSortedByRow)):
+        if movesSortedByRow[i][0][0] == highestRowWithMoves:
+            highestMoves.append(movesSortedByRow[i])
+        else:
+            break
+    return highestMoves[-1]
+def chooseBottom5(moves):
     #pick randomly from the 5 moves nearest the bottom
-    movesSortedByRow = sorted(moves, key=lambda x : x[0][0])
+    movesSortedByRow = sorted(moves, key = lambda x: x[0][0])
     return random.choice(movesSortedByRow[-5:])
 
-scores = testStrategy(chooseNearBottom, 1000)
+####################################
+# run the test, export the results #
+####################################
+
+scores = testStrategy(chooseFromHighest, 50000)
 
 #export scores data in R-readable format
-f = open("/home/matthew/Dropbox/code/python/jewels/scores.txt", "a")
+f = open("/home/mjt/Dropbox/code/python/jewels/chooseFromHighest_scores.txt", "a")
 r_string = "\nx=c(" + ",".join(map(str, scores)) + ")"
 #use source("scores.txt") in R to load this
 f.write(r_string)
 f.close()
+
+#mean ~150 for top 3, ~120 for top 5, ~195 for top 2, ~310 for top 1.
+#but chooseFromHighest seems to be smaller (weak evidence: n=10000, mean=299.2, sd = 276.2)
+#chooseLastHighest: n 10000 mean 299.3363 sd 271.212
+#another 10000 run of rightmost gave mean 302.7, sd 276.12
+#another 10000 run of top1 gave mean 314.4482, sd 289.886
+# It isn't a problem that chooseLastHighest does worse than chooseTop1:
+# it isn't picking the rightmost move, because top1 tends to do
+# horizontal monos first
+
 
 # to do: log number of moves available to get an idea of what the sequences look like
 # make a mixed strategy that plays near the top, but near the bottom when few moves are available
