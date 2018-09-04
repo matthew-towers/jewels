@@ -32,10 +32,10 @@ shows the empirical density function obtained by running 100000 games
 (more than enough to get a good estimate of the mean if the stdev is
 really around 87);
 the blue dashed vertical line shows the mean score.
-![Empirical density plot for scores obtained by randomly choosing monos](https://raw.githubusercontent.com/silverfish707/jewels/master/randomchoices.svg)
+![Empirical density plot for scores obtained by randomly choosing monos](https://raw.githubusercontent.com/silverfish707/jewels/master/randomchoices.svg?sanitize=true)
 
 Choosing randomly amongst the highest monos on the board does a lot
 better (mean score 298, median 219, standard deviation 268). Here's a
 density plot based on 50000 games (fewer than before because it takes a
 lot longer).
-![Empirical density plot for scores obtained by choosing amongst the highest monos](https://raw.githubusercontent.com/silverfish707/jewels/master/chooseFromHighest.svg)
+![Empirical density plot for scores obtained by choosing amongst the highest monos](https://raw.githubusercontent.com/silverfish707/jewels/master/chooseFromHighest.svg?sanitize=true)
