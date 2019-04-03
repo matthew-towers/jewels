@@ -3,6 +3,7 @@
 
 import random
 from matplotlib import pyplot as plt
+import scipy.stats as stat
 
 # global game parameters. The rockbox jewels game has width=height=8,
 # numberOfColours=7, vanishLength=3
@@ -17,6 +18,7 @@ vanishLength = 3  # a collection of at least vanishLength blocks of the same
 class board:
     score = 0
     entries = [[0 for i in range(width)] for j in range(height)]
+    numberOfTurns = 0
 
     def printEntries(self):  # only for <10 colours
         for j in range(height):
@@ -89,10 +91,10 @@ class board:
 
     def evolve(self):
         # repeat:
-        #  zero out any monos
-        #  update the score
-        #  gravity
-        #  random fill any spaces
+        #   zero out any monos
+        #   update the score
+        #   gravity
+        #   random fill any spaces
         # until there are no more monos
         while len(self.findMonos()) != 0:
             monos = self.findMonos()
@@ -221,24 +223,43 @@ def testStrategy(chooser, numberOfGames):
     # a function `chooser' which accepts a list of moves and returns
     # one of them, and a number numberOfGames, and runs numberOfGames
     # games using chooser to pick from the available moves.
-    # It returns the list of scores from those games
+    # It returns the list of scores from those games and the list of game
+    # lengths.
     scores = []
+    lengths = []
+    deltaMovesAvailable = []
     for i in range(numberOfGames):
         b = board()
         b.randomize()
+        movesAvailableThisGame = []
         while True:
             b.evolve()
             moves, numberOfAvailableMoves = b.legitMoves()
+            movesAvailableThisGame.append(numberOfAvailableMoves)
             if numberOfAvailableMoves == 0:
                 scores.append(b.score)
-                # TODO: log changes in number of available moves
+                lengths.append(b.numberOfTurns)
+                deltas = [movesAvailableThisGame[i + 1] -
+                          movesAvailableThisGame[i]
+                          for i in range(len(movesAvailableThisGame) - 1)]
+                deltaMovesAvailable += deltas
                 break
             b.applyMove(chooser(moves))
+            b.numberOfTurns += 1
 
-    mu = sum(scores)/(1.0 * numberOfGames)
-    s2 = sum([(x - mu) ** 2 for x in scores]) / (numberOfGames - 1)
-    print "n", numberOfGames, "mean", mu, "sd", s2 ** 0.5
-    return scores
+    # mu = sum(scores) / (1.0 * numberOfGames)
+    # s2 = sum([(x - mu) ** 2 for x in scores]) / (numberOfGames - 1)
+    # print "n", numberOfGames, "mean score", mu, "sd score", s2 ** 0.5
+    # meanDelta = sum(deltaMovesAvailable)/(1.0 * numberOfGames)
+    # s2D = sum([(x - meanDelta) ** 2
+    #           for x in deltaMovesAvailable]) / (numberOfGames - 1)
+    # print "mean delta available moves", meanDelta, "sd", s2D
+    print "scores", stat.describe(scores), "sd", stat.tstd(scores)
+    print "lengths", stat.describe(lengths), "sd", stat.tstd(lengths)
+    print("deltas", stat.describe(deltaMovesAvailable), "sd",
+          stat.tstd(deltaMovesAvailable))
+    print "sample corr coeff lengths-scores", stat.pearsonr(lengths, scores)
+    return scores, lengths, deltaMovesAvailable
 
 ##########################
 # some chooser functions #
@@ -297,13 +318,19 @@ def chooseBottom5(moves):
     return random.choice(movesSortedByRow[-5:])
 
 
-####################################
-# run the test, export the results #
-####################################
+#############################################
+# run the test, plot and export the results #
+#############################################
 
-scores = testStrategy(chooseFromHighest, 5000)
+scores, lengths, deltas = testStrategy(chooseFromHighest, 5000)
 
 plt.hist(scores, density=True, bins=70)
+plt.show()
+
+plt.scatter(lengths, scores)
+plt.show()
+
+plt.hist(deltas, density=True, bins=50)
 plt.show()
 
 # export scores data in R-readable format
