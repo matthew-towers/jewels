@@ -228,6 +228,7 @@ def testStrategy(chooser, numberOfGames):
     scores = []
     lengths = []
     deltaMovesAvailable = []
+    initialMovesAvailable = []
     for i in range(numberOfGames):
         b = board()
         b.randomize()
@@ -243,6 +244,7 @@ def testStrategy(chooser, numberOfGames):
                           movesAvailableThisGame[i]
                           for i in range(len(movesAvailableThisGame) - 1)]
                 deltaMovesAvailable += deltas
+                initialMovesAvailable.append(movesAvailableThisGame[0])
                 break
             b.applyMove(chooser(moves))
             b.numberOfTurns += 1
@@ -256,10 +258,11 @@ def testStrategy(chooser, numberOfGames):
     # print "mean delta available moves", meanDelta, "sd", s2D
     print "scores", stat.describe(scores), "sd", stat.tstd(scores)
     print "lengths", stat.describe(lengths), "sd", stat.tstd(lengths)
-    print("deltas", stat.describe(deltaMovesAvailable), "sd",
-          stat.tstd(deltaMovesAvailable))
+    print "deltas", stat.describe(deltaMovesAvailable), "sd", \
+        stat.tstd(deltaMovesAvailable)
     print "sample corr coeff lengths-scores", stat.pearsonr(lengths, scores)
-    return scores, lengths, deltaMovesAvailable
+    print "initial moves", stat.describe(initialMovesAvailable)
+    return scores, lengths, deltaMovesAvailable, initialMovesAvailable
 
 ##########################
 # some chooser functions #
@@ -322,15 +325,22 @@ def chooseBottom5(moves):
 # run the test, plot and export the results #
 #############################################
 
-scores, lengths, deltas = testStrategy(chooseFromHighest, 5000)
+scores, lengths, deltas, initials = testStrategy(chooseFromHighest, 5000)
 
 plt.hist(scores, density=True, bins=70)
+plt.title("scores density")
 plt.show()
 
 plt.scatter(lengths, scores)
+plt.title("lengths vs scores")
 plt.show()
 
 plt.hist(deltas, density=True, bins=50)
+plt.title("available move deltas")
+plt.show()
+
+plt.hist(initials, density=True, bins=50)
+plt.title("initial number of moves available")
 plt.show()
 
 # export scores data in R-readable format
