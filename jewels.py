@@ -4,6 +4,8 @@
 import random
 from matplotlib import pyplot as plt
 import scipy.stats as stat
+from collections import Counter, defaultdict
+import pickle
 
 # global game parameters. The rockbox jewels game has width=height=8,
 # numberOfColours=7, vanishLength=3
@@ -102,20 +104,8 @@ class board:
                 self.score += len(m) - vanishLength + 1
                 for x in m:
                     self.entries[x[0]][x[1]] = 0
-            # debugging:
-            # self.printEntries()
-            # print "\nscore is now ", self.score, "\n"
-            # end debugging
             self.gravity()
-            # debugging
-            # self.printEntries()
-            # print "\n"
-            # end debugging
             self.randomFillZeroes()
-            # debugging
-            # self.printEntries()
-            # print "\n"
-            # end debugging
 
     def horizontalMonoContaining(self, coords):
         # does self.entries contain a horizontal mono containing the entry
@@ -225,10 +215,21 @@ def testStrategy(chooser, numberOfGames):
     # games using chooser to pick from the available moves.
     # It returns the list of scores from those games and the list of game
     # lengths.
+    #
+    # DONE: for a random walk simulation to be appropriate, the distribution
+    # of move deltas should be independent of the number of available moves.
+    # To test this we should log the deltas for each possible number of
+    # available moves, and compare the distributions.
+    # deltasByPosition should be a defaultdict:
+    # deltasByPosition = defaultdict(list), then dbp[n].append(delta)
+    # keys = number n of moves available,
+    # deltasByPosition[n] = list of deltas for that n
     scores = []
     lengths = []
     deltaMovesAvailable = []
     initialMovesAvailable = []
+    maxMovesAvailable = []
+    deltasByPosition = defaultdict(list)
     for i in range(numberOfGames):
         b = board()
         b.randomize()
@@ -244,25 +245,32 @@ def testStrategy(chooser, numberOfGames):
                           movesAvailableThisGame[i]
                           for i in range(len(movesAvailableThisGame) - 1)]
                 deltaMovesAvailable += deltas
+                for i in range(len(movesAvailableThisGame) - 1):
+                    deltasByPosition[movesAvailableThisGame[i]].append(deltas[i])
                 initialMovesAvailable.append(movesAvailableThisGame[0])
+                maxMovesAvailable.append(max(movesAvailableThisGame))
                 break
             b.applyMove(chooser(moves))
             b.numberOfTurns += 1
 
-    # mu = sum(scores) / (1.0 * numberOfGames)
-    # s2 = sum([(x - mu) ** 2 for x in scores]) / (numberOfGames - 1)
-    # print "n", numberOfGames, "mean score", mu, "sd score", s2 ** 0.5
-    # meanDelta = sum(deltaMovesAvailable)/(1.0 * numberOfGames)
-    # s2D = sum([(x - meanDelta) ** 2
-    #           for x in deltaMovesAvailable]) / (numberOfGames - 1)
-    # print "mean delta available moves", meanDelta, "sd", s2D
     print "scores", stat.describe(scores), "sd", stat.tstd(scores)
     print "lengths", stat.describe(lengths), "sd", stat.tstd(lengths)
     print "deltas", stat.describe(deltaMovesAvailable), "sd", \
         stat.tstd(deltaMovesAvailable)
     print "sample corr coeff lengths-scores", stat.pearsonr(lengths, scores)
     print "initial moves", stat.describe(initialMovesAvailable)
-    return scores, lengths, deltaMovesAvailable, initialMovesAvailable
+    print "max moves", stat.describe(maxMovesAvailable)
+    expectedJumps = []
+    positions = []
+    for k in deltasByPosition.keys():
+        positions.append(k)
+        expectedJumps.append(stat.tmean(deltasByPosition[k]))
+        print "available moves", k, "delta dist", stat.describe(deltasByPosition[k])
+    plt.plot(positions, expectedJumps)
+    plt.title("position - expected jump")
+    plt.show()
+    return scores, lengths, deltaMovesAvailable, initialMovesAvailable, \
+        maxMovesAvailable, deltasByPosition
 
 ##########################
 # some chooser functions #
@@ -321,35 +329,69 @@ def chooseBottom5(moves):
     return random.choice(movesSortedByRow[-5:])
 
 
-#############################################
-# run the test, plot and export the results #
-#############################################
+##################################
+# run the test, plot the results #
+##################################
 
-scores, lengths, deltas, initials = testStrategy(chooseFromHighest, 5000)
+scores, lengths, deltas, initials, maxs, dbp = testStrategy(chooseFromHighest, 5000)
 
 plt.hist(scores, density=True, bins=70)
 plt.title("scores density")
+plt.show()
+
+plt.hist(lengths, density=True, bins=70)
+plt.title("lengths density")
 plt.show()
 
 plt.scatter(lengths, scores)
 plt.title("lengths vs scores")
 plt.show()
 
-plt.hist(deltas, density=True, bins=50)
-plt.title("available move deltas")
-plt.show()
-
 plt.hist(initials, density=True, bins=50)
 plt.title("initial number of moves available")
 plt.show()
 
-# export scores data in R-readable format
-f = open("/home/mjt/Dropbox/code/python/jewels/chooseFromHighest_scores.txt",
-         "a")
-r_string = "\nx=c(" + ",".join(map(str, scores)) + ")"
-# use source("scores.txt") in R to load this
-f.write(r_string)
-f.close()
+plt.hist(maxs, bins=50)
+plt.title("max number moves available")
+plt.show()
+
+plt.hist(deltas, density=True, bins=50)
+plt.title("available move deltas overall")
+plt.show()
+
+# TODO: find out how to smooth these into empirical pdfs and plot them all on
+# the same axis so that we can compare them.
+# In the meantime here's a hacky way to do that
+# It's horrible, unreadable, must fix it
+# try ',' for pixel marker
+
+for k in range(1, 16, 2):  # dbp.keys():
+    n = len(dbp[k])
+    c = Counter(dbp[k])
+    xvalues = sorted(c.keys())
+    yvalues = [c[key] / (n * 1.0) for key in xvalues]
+    plt.plot(xvalues, yvalues, label=str(k))  # weird results for
+    # plotting lines unless x-values sorted
+
+plt.legend()
+plt.title("available move deltas by posn")
+plt.show()
+
+# save the available moves distribution for simulation
+counts = Counter()
+for d in deltas:
+    counts[d] += 1
+with open("deltacounter.pkl", 'wb') as output:
+    pickle.dump(counts, output)
+
+
+# # export scores data in R-readable format
+# f = open("/home/mjt/Dropbox/code/python/jewels/chooseFromHighest_scores.txt",
+#          "a")
+# r_string = "\nx=c(" + ",".join(map(str, scores)) + ")"
+# # use source("scores.txt") in R to load this
+# f.write(r_string)
+# f.close()
 
 # mean ~150 for top 3, ~120 for top 5, ~195 for top 2, ~310 for top 1.
 # but chooseFromHighest seems to be smaller (weak evidence: n=10000,
@@ -360,9 +402,3 @@ f.close()
 # It isn't a problem that chooseLastHighest does worse than chooseTop1:
 # it isn't picking the rightmost move, because top1 tends to do
 # horizontal monos first
-
-
-# to do: log number of moves available to get an idea of what the sequences
-# look like
-# make a mixed strategy that plays near the top, but near the bottom when few
-# moves are available
