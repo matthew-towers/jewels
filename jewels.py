@@ -1,11 +1,14 @@
 # implement the matching game Jewels in a machine-playable way, test
 # various strategies
 
+# TODO: would it be faster if the boards were numpy arrays?
+
 import random
 from matplotlib import pyplot as plt
 import scipy.stats as stat
 from collections import Counter, defaultdict
 import pickle
+import numpy
 
 # global game parameters. The rockbox jewels game has width=height=8,
 # numberOfColours=7, vanishLength=3
@@ -22,7 +25,7 @@ class board:
     entries = [[0 for i in range(width)] for j in range(height)]
     numberOfTurns = 0
 
-    def printEntries(self):  # only for <10 colours
+    def printEntries(self):  # only for <10 colours. Never used.
         for j in range(height):
             print " ".join(map(str, self.entries[j]))
 
@@ -161,7 +164,7 @@ class board:
                     # it makes sense to swap [i,j] and [i,j+1]. does that
                     #  create a new mono?
                     # copy.deepcopy is really slow, so we'll apply the move,
-                    #  test for monos, then apply it again to get back where we
+                    # test for monos, then apply it again to get back where we
                     # started
                     self.applyMove([[i, j], [i, j + 1]])
                     # now look for monos. There can be four kinds:
@@ -216,10 +219,13 @@ def testStrategy(chooser, numberOfGames):
     # It returns the list of scores from those games and the list of game
     # lengths.
     #
-    # DONE: for a random walk simulation to be appropriate, the distribution
-    # of move deltas should be independent of the number of available moves.
+    # DONE: for a simple random walk simulation to be appropriate, the
+    # distribution of move deltas should be independent of the number of
+    # available moves.
+    #
     # To test this we should log the deltas for each possible number of
     # available moves, and compare the distributions.
+    #
     # deltasByPosition should be a defaultdict:
     # deltasByPosition = defaultdict(list), then dbp[n].append(delta)
     # keys = number n of moves available,
@@ -283,7 +289,7 @@ def randomChooser(moves):
 
 def chooseFromTop3(moves):
     # pick randomly from the 3 moves nearest the top
-    movesSortedByRow = sorted(moves, key=lambda x: x[0][0])
+    movesSortedByRow = sorted(moves, key=lambda x: x[0][0])  # awful. TODO: fix
     return random.choice(movesSortedByRow[:3])
 
 
@@ -333,7 +339,7 @@ def chooseBottom5(moves):
 # run the test, plot the results #
 ##################################
 
-scores, lengths, deltas, initials, maxs, dbp = testStrategy(chooseFromHighest, 5000)
+scores, lengths, deltas, initials, maxs, dbp = testStrategy(chooseFromHighest, 10000)
 
 plt.hist(scores, density=True, bins=70)
 plt.title("scores density")
@@ -359,19 +365,13 @@ plt.hist(deltas, density=True, bins=50)
 plt.title("available move deltas overall")
 plt.show()
 
-# TODO: find out how to smooth these into empirical pdfs and plot them all on
-# the same axis so that we can compare them.
-# In the meantime here's a hacky way to do that
-# It's horrible, unreadable, must fix it
-# try ',' for pixel marker
-
-for k in range(1, 16, 2):  # dbp.keys():
+for k in [1, 4, 8, 12, 16]:  # dbp.keys():
     n = len(dbp[k])
     c = Counter(dbp[k])
-    xvalues = sorted(c.keys())
+    xvalues = sorted(c.keys())  # weird results for plotting lines unless
+    # x-values sorted
     yvalues = [c[key] / (n * 1.0) for key in xvalues]
-    plt.plot(xvalues, yvalues, label=str(k))  # weird results for
-    # plotting lines unless x-values sorted
+    plt.plot(xvalues, yvalues, label=str(k))
 
 plt.legend()
 plt.title("available move deltas by posn")
