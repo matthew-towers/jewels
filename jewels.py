@@ -253,24 +253,96 @@ def testStrategy(chooser, numberOfGames):
             b.applyMove(chooser(moves))
             b.numberOfTurns += 1
 
+    statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
+                  maxMovesAvailable, deltasByPosition)
+
+
+def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
+                  maxMovesAvailable, deltasByPosition):
+    ######################
+    # scores and lengths #
+    ######################
+
+    plt.hist(scores, density=True, bins=70)
+    plt.title("scores density")
+    plt.show()
+
     print "scores", stat.describe(scores), "sd", stat.tstd(scores)
+
+    plt.hist(lengths, density=True, bins=70)
+    plt.title("lengths density")
+    plt.show()
+
     print "lengths", stat.describe(lengths), "sd", stat.tstd(lengths)
-    print "deltas", stat.describe(deltaMovesAvailable), "sd", \
-        stat.tstd(deltaMovesAvailable)
+
+    plt.scatter(lengths, scores)
+    plt.title("lengths vs scores")
+    plt.show()
+
     print "sample corr coeff lengths-scores", stat.pearsonr(lengths, scores)
-    print "initial moves", stat.describe(initialMovesAvailable)
-    print "max moves", stat.describe(maxMovesAvailable)
+
+    ###############
+    # move deltas #
+    ###############
+
     expectedJumps = []
     positions = []
+
     for k in deltasByPosition.keys():
         positions.append(k)
         expectedJumps.append(stat.tmean(deltasByPosition[k]))
         print "available moves", k, "delta dist", stat.describe(deltasByPosition[k])
+
+    for k in [1, 4, 8, 12, 16]:  # dbp.keys():
+        n = len(deltasByPosition[k])
+        c = Counter(deltasByPosition[k])
+        xvalues = sorted(c.keys())  # weird results for plotting lines unless
+        # x-values sorted
+        yvalues = [c[key] / (n * 1.0) for key in xvalues]
+        plt.plot(xvalues, yvalues, label=str(k))
+
+    plt.legend()
+    plt.title("available move deltas by position")
+    plt.show()
+
     plt.plot(positions, expectedJumps)
     plt.title("position - expected jump")
     plt.show()
-    return scores, lengths, deltaMovesAvailable, initialMovesAvailable, \
-        maxMovesAvailable, deltasByPosition
+
+    plt.hist(deltaMovesAvailable, density=True, bins=50)
+    plt.title("available move deltas overall")
+    plt.show()
+
+    print "deltas", stat.describe(deltaMovesAvailable), "sd", \
+        stat.tstd(deltaMovesAvailable)
+
+    #############################################
+    # initial and max number of moves available #
+    #############################################
+
+    plt.hist(initialMovesAvailable, density=True, bins=50)
+    plt.title("initial number of moves available")
+    plt.show()
+
+    print "initial moves", stat.describe(initialMovesAvailable)
+
+    plt.hist(maxMovesAvailable, bins=50)
+    plt.title("max number moves available")
+    plt.show()
+
+    print "max moves", stat.describe(maxMovesAvailable)
+
+    ###########
+    # Logging #
+    ###########
+
+    # save the available moves distribution for simulation
+    counts = Counter()
+    for d in deltaMovesAvailable:
+        counts[d] += 1
+    with open("deltacounter.pkl", 'wb') as output:
+        pickle.dump(counts, output)
+
 
 ##########################
 # some chooser functions #
@@ -333,56 +405,7 @@ def chooseBottom5(moves):
 # run the test, plot the results #
 ##################################
 
-scores, lengths, deltas, initials, maxs, dbp = testStrategy(chooseFromHighest, 5000)
-
-plt.hist(scores, density=True, bins=70)
-plt.title("scores density")
-plt.show()
-
-plt.hist(lengths, density=True, bins=70)
-plt.title("lengths density")
-plt.show()
-
-plt.scatter(lengths, scores)
-plt.title("lengths vs scores")
-plt.show()
-
-plt.hist(initials, density=True, bins=50)
-plt.title("initial number of moves available")
-plt.show()
-
-plt.hist(maxs, bins=50)
-plt.title("max number moves available")
-plt.show()
-
-plt.hist(deltas, density=True, bins=50)
-plt.title("available move deltas overall")
-plt.show()
-
-# TODO: find out how to smooth these into empirical pdfs and plot them all on
-# the same axis so that we can compare them.
-# In the meantime here's a hacky way to do that
-# It's horrible, unreadable, must fix it
-# try ',' for pixel marker
-
-for k in range(1, 16, 2):  # dbp.keys():
-    n = len(dbp[k])
-    c = Counter(dbp[k])
-    xvalues = sorted(c.keys())
-    yvalues = [c[key] / (n * 1.0) for key in xvalues]
-    plt.plot(xvalues, yvalues, label=str(k))  # weird results for
-    # plotting lines unless x-values sorted
-
-plt.legend()
-plt.title("available move deltas by posn")
-plt.show()
-
-# save the available moves distribution for simulation
-counts = Counter()
-for d in deltas:
-    counts[d] += 1
-with open("deltacounter.pkl", 'wb') as output:
-    pickle.dump(counts, output)
+testStrategy(chooseFromHighest, 100)
 
 
 # # export scores data in R-readable format
