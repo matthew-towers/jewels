@@ -6,6 +6,8 @@ from matplotlib import pyplot as plt
 import scipy.stats as stat
 from collections import Counter, defaultdict
 import pickle
+import os
+from datetime import datetime
 
 # global game parameters. The rockbox jewels game has width=height=8,
 # numberOfColours=7, vanishLength=3
@@ -21,6 +23,9 @@ class board:
     score = 0
     entries = [[0 for i in range(width)] for j in range(height)]
     numberOfTurns = 0
+
+    # the nump branch in github shows what happens if you store the entries
+    # in a numpy array of ints - it's slower by a factor of nearly 2
 
     def printEntries(self):  # only for <10 colours
         for j in range(height):
@@ -259,27 +264,55 @@ def testStrategy(chooser, numberOfGames):
 
 def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
                   maxMovesAvailable, deltasByPosition):
+    # Produce plots and statistics, write them to disk in a sensible manner
+    #
+    # Note: scipy.stats.kurtosis produces the excess kurtosis by default
+
+    ##################################
+    # create a directory for writing #
+    ##################################
+
+    # create a subdirectory of where the script is running named with the
+    # current date and time
+    todayString = datetime.today().replace(microsecond=0).isoformat()
+    # e.g. '2019-05-01T16:20:47', ok as a unix directory name
+    os.mkdir(todayString)
+    cwd = os.path.dirname(os.path.abspath(__file__))
+    pat = os.path.join(cwd, todayString)
+    # now pat is the path to the directory in which we'll do our logging
+    f = open(pat + "/stats.txt", "w+")
+    # we'll log all stats to this file
+
     ######################
     # scores and lengths #
     ######################
 
     plt.hist(scores, density=True, bins=70)
     plt.title("scores density")
+    plt.savefig(pat + "/scoresDensity.svg", format='svg')
     plt.show()
 
-    print "scores", stat.describe(scores), "sd", stat.tstd(scores)
+    op = "scores " + str(stat.describe(scores)) + "sd " + str(stat.tstd(scores))
+    print op
+    f.write(op + "\n")
 
     plt.hist(lengths, density=True, bins=70)
     plt.title("lengths density")
+    plt.savefig(pat + "/lengthsDensity.svg", format='svg')
     plt.show()
 
-    print "lengths", stat.describe(lengths), "sd", stat.tstd(lengths)
+    op = "lengths "+ str(stat.describe(lengths)) + "sd " +str(stat.tstd(lengths))
+    print(op)
+    f.write(op + "\n")
 
     plt.scatter(lengths, scores)
     plt.title("lengths vs scores")
+    plt.savefig(pat + "/lengthsVscores.svg", format='svg')
     plt.show()
 
-    print "sample corr coeff lengths-scores", stat.pearsonr(lengths, scores)
+    op = "sample corr coeff lengths-scores " + str(stat.pearsonr(lengths, scores))
+    print op
+    f.write(op + "\n")
 
     ###############
     # move deltas #
@@ -287,11 +320,22 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
 
     expectedJumps = []
     positions = []
+    variances = []
+    kurtoses = []
+    sds = []
+    skewnesses = []
 
     for k in deltasByPosition.keys():
         positions.append(k)
         expectedJumps.append(stat.tmean(deltasByPosition[k]))
-        print "available moves", k, "delta dist", stat.describe(deltasByPosition[k])
+        descr = stat.describe(deltasByPosition[k])
+        variances.append(descr.variance)
+        kurtoses.append(descr.kurtosis)
+        sds.append(descr.variance ** 0.5)
+        skewnesses.append(descr.skewness)
+        op = "available moves " + str(k) + " delta dist " + str(descr)
+        print op
+        f.write(op + "\n")
 
     for k in [1, 4, 8, 12, 16]:  # dbp.keys():
         n = len(deltasByPosition[k])
@@ -303,18 +347,56 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
 
     plt.legend()
     plt.title("available move deltas by position")
+    plt.savefig(pat + "/move_deltas_by_position.svg", format='svg')
+    plt.show()
+
+    for k in [1, 4, 8, 12, 16]:
+        c = Counter(deltasByPosition[k])
+        xvalues = sorted(c.keys())
+        xtrunc = [x for x in xvalues if x >= -1]
+        n = sum([c[key] for key in xtrunc])
+        yvalues = [c[key] / (n * 1.0) for key in xtrunc]
+        plt.plot(xtrunc, yvalues, label=str(k))
+
+    plt.legend()
+    plt.title("move deltas by position, ignoring steps <-1")
+    plt.savefig(pat + "/conditional_move_deltas_by_position.svg", format='svg')
     plt.show()
 
     plt.plot(positions, expectedJumps)
     plt.title("position - expected jump")
+    plt.savefig(pat + "/position_vs_expected_jump.svg", format='svg')
+    plt.show()
+
+    plt.plot(positions, variances)
+    plt.title("position - variance of jumps")
+    plt.savefig(pat + "/position_variance.svg", format='svg')
+    plt.show()
+
+    plt.plot(positions, sds)
+    plt.title("position - sd of jumps")
+    plt.savefig(pat + "/position_sd.svg", format='svg')
+    plt.show()
+
+    plt.plot(positions, kurtoses)
+    plt.title("position - kurtosis")
+    plt.savefig(pat + "/position_kurtosis.svg", format='svg')
+    plt.show()
+
+    plt.plot(positions, skewnesses)
+    plt.title("position - skewness")
+    plt.savefig(pat + "/skewness.svg", format='svg')
     plt.show()
 
     plt.hist(deltaMovesAvailable, density=True, bins=50)
     plt.title("available move deltas overall")
+    plt.savefig(pat + "/available_move_deltas.svg", format='svg')
     plt.show()
 
-    print "deltas", stat.describe(deltaMovesAvailable), "sd", \
-        stat.tstd(deltaMovesAvailable)
+    op = "deltas " + str(stat.describe(deltaMovesAvailable)) + " sd " + \
+        str(stat.tstd(deltaMovesAvailable))
+    print op
+    f.write(op + '\n')
 
     #############################################
     # initial and max number of moves available #
@@ -322,26 +404,42 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
 
     plt.hist(initialMovesAvailable, density=True, bins=50)
     plt.title("initial number of moves available")
+    plt.savefig(pat + "/initialMovesAvailable.svg", format='svg')
     plt.show()
 
-    print "initial moves", stat.describe(initialMovesAvailable)
+    op = "initial moves" + str(stat.describe(initialMovesAvailable))
+    print op
+    f.write(op + '\n')
 
     plt.hist(maxMovesAvailable, bins=50)
     plt.title("max number moves available")
+    plt.savefig(pat + "/maxMovesAvailable.svg", format='svg')
     plt.show()
 
-    print "max moves", stat.describe(maxMovesAvailable)
+    op = "max moves " + str(stat.describe(maxMovesAvailable))
+    print op
+    f.write(op + '\n')
 
-    ###########
-    # Logging #
-    ###########
+    f.close()
 
+    ############
+    # Pickling #
+    ############
+
+    def pick(name, obj):
+        with open(pat + "/" + name + ".pkl", 'wb') as output:
+            pickle.dump(obj, output)
     # save the available moves distribution for simulation
     counts = Counter()
     for d in deltaMovesAvailable:
         counts[d] += 1
-    with open("deltacounter.pkl", 'wb') as output:
-        pickle.dump(counts, output)
+    pick("deltacounter", counts)
+    pick("scores", scores)
+    pick("lengths", lengths)
+    pick("deltaMovesAvailable", deltaMovesAvailable)
+    pick("initials", initialMovesAvailable)
+    pick("maxes", maxMovesAvailable)
+    pick("deltas by posn", deltasByPosition)
 
 
 ##########################
@@ -405,7 +503,7 @@ def chooseBottom5(moves):
 # run the test, plot the results #
 ##################################
 
-testStrategy(chooseFromHighest, 100)
+testStrategy(chooseFromHighest, 5)
 
 
 # # export scores data in R-readable format
