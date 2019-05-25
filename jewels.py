@@ -427,6 +427,11 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     print op
     f.write(op + '\n')
 
+    plt.hist(chains, bins=15, density=True)
+    plt.title("number of chain reactions caused")
+    plt.savefig(pat + "/chains.svg", format='svg')
+    plt.show()
+
     averageChainReactions = sum(chains) * 1.0 / len(chains)
     numberChainReactions = len([x for x in chains if x > 0])
     proportionChainReactions = numberChainReactions * 1.0 / len(chains)
@@ -435,7 +440,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     print op
     f.write(op + '\n')
 
-    plt.hist(allMovesAvailable, bins=40)
+    plt.hist(allMovesAvailable, bins=40, density=True)
     plt.title("number of moves available")
     plt.savefig(pat + "/allMovesAvailable.svg", format='svg')
     plt.show()
