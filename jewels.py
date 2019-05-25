@@ -239,6 +239,7 @@ def testStrategy(chooser, numberOfGames):
     initialMovesAvailable = []
     maxMovesAvailable = []
     chains = []
+    allMovesAvailable = []
     deltasByPosition = defaultdict(list)
     for i in range(numberOfGames):
         b = board()
@@ -259,16 +260,17 @@ def testStrategy(chooser, numberOfGames):
                     deltasByPosition[movesAvailableThisGame[i]].append(deltas[i])
                 initialMovesAvailable.append(movesAvailableThisGame[0])
                 maxMovesAvailable.append(max(movesAvailableThisGame))
+                allMovesAvailable += movesAvailableThisGame
                 break
             b.applyMove(chooser(moves))
             b.numberOfTurns += 1
 
     statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
-                  maxMovesAvailable, deltasByPosition, chains)
+                  maxMovesAvailable, deltasByPosition, chains, allMovesAvailable)
 
 
 def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
-                  maxMovesAvailable, deltasByPosition, chains):
+                  maxMovesAvailable, deltasByPosition, chains, allMovesAvailable):
     # Produce plots and statistics, write them to disk in a sensible manner
     #
     # Note: scipy.stats.kurtosis produces the excess kurtosis by default
@@ -306,7 +308,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     plt.savefig(pat + "/lengthsDensity.svg", format='svg')
     plt.show()
 
-    op = "lengths "+ str(stat.describe(lengths)) + "sd " +str(stat.tstd(lengths))
+    op = "lengths " + str(stat.describe(lengths)) + "sd " + str(stat.tstd(lengths))
     print(op)
     f.write(op + "\n")
 
@@ -403,9 +405,9 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     print op
     f.write(op + '\n')
 
-    ##############################################################
-    # initial and max number of moves available, chain reactions #
-    ##############################################################
+    #################################################################
+    # initial, max, all numbers of moves available, chain reactions #
+    #################################################################
 
     plt.hist(initialMovesAvailable, density=True, bins=50)
     plt.title("initial number of moves available")
@@ -429,7 +431,15 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     numberChainReactions = len([x for x in chains if x > 0])
     proportionChainReactions = numberChainReactions * 1.0 / len(chains)
     op = "avg no. chain reactions per move " + str(averageChainReactions) + \
-         "proportion of moves causing a cr " + str(proportionChainReactions)
+         " proportion of moves causing a cr " + str(proportionChainReactions)
+    print op
+    f.write(op + '\n')
+
+    plt.hist(allMovesAvailable, bins=40)
+    plt.title("number of moves available")
+    plt.savefig(pat + "/allMovesAvailable.svg", format='svg')
+    plt.show()
+    op = "moves avail " + str(stat.describe(allMovesAvailable))
     print op
     f.write(op + '\n')
 
@@ -453,6 +463,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     pick("initials", initialMovesAvailable)
     pick("maxes", maxMovesAvailable)
     pick("deltas by posn", deltasByPosition)
+    pick("allMovesAvailable", allMovesAvailable)
 
 
 ##########################
