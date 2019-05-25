@@ -102,8 +102,11 @@ class board:
         #   update the score
         #   gravity
         #   random fill any spaces
-        # until there are no more monos
+        # until there are no more monos.
+        # return the number of chain reactions caused
+        chains = -1
         while len(self.findMonos()) != 0:
+            chains += 1
             monos = self.findMonos()
             for m in monos:
                 self.score += len(m) - vanishLength + 1
@@ -111,6 +114,7 @@ class board:
                     self.entries[x[0]][x[1]] = 0
             self.gravity()
             self.randomFillZeroes()
+        return chains
 
     def horizontalMonoContaining(self, coords):
         # does self.entries contain a horizontal mono containing the entry
@@ -234,13 +238,14 @@ def testStrategy(chooser, numberOfGames):
     deltaMovesAvailable = []
     initialMovesAvailable = []
     maxMovesAvailable = []
+    chains = []
     deltasByPosition = defaultdict(list)
     for i in range(numberOfGames):
         b = board()
         b.randomize()
         movesAvailableThisGame = []
         while True:
-            b.evolve()
+            chains.append(b.evolve())
             moves, numberOfAvailableMoves = b.legitMoves()
             movesAvailableThisGame.append(numberOfAvailableMoves)
             if numberOfAvailableMoves == 0:
@@ -259,11 +264,11 @@ def testStrategy(chooser, numberOfGames):
             b.numberOfTurns += 1
 
     statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
-                  maxMovesAvailable, deltasByPosition)
+                  maxMovesAvailable, deltasByPosition, chains)
 
 
 def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
-                  maxMovesAvailable, deltasByPosition):
+                  maxMovesAvailable, deltasByPosition, chains):
     # Produce plots and statistics, write them to disk in a sensible manner
     #
     # Note: scipy.stats.kurtosis produces the excess kurtosis by default
@@ -398,9 +403,9 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     print op
     f.write(op + '\n')
 
-    #############################################
-    # initial and max number of moves available #
-    #############################################
+    ##############################################################
+    # initial and max number of moves available, chain reactions #
+    ##############################################################
 
     plt.hist(initialMovesAvailable, density=True, bins=50)
     plt.title("initial number of moves available")
@@ -417,6 +422,14 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     plt.show()
 
     op = "max moves " + str(stat.describe(maxMovesAvailable))
+    print op
+    f.write(op + '\n')
+
+    averageChainReactions = sum(chains) * 1.0 / len(chains)
+    numberChainReactions = len([x for x in chains if x > 0])
+    proportionChainReactions = numberChainReactions * 1.0 / len(chains)
+    op = "avg no. chain reactions per move " + str(averageChainReactions) + \
+         "proportion of moves causing a cr " + str(proportionChainReactions)
     print op
     f.write(op + '\n')
 
