@@ -43,7 +43,7 @@ class board:
         # making up the corresponding mono
         # if we stored the board as a numpy matrix we could extract the
         # rows or columns as vectors and so avoid writing all this stuff
-        # twice...
+        # twice...(but it turns out to be a lot slower in numpy)
         output = []
         # first, the horizontal monos
         for i in range(height):
@@ -225,14 +225,16 @@ def testStrategy(chooser, numberOfGames):
     # It returns the list of scores from those games and the list of game
     # lengths.
     #
-    # DONE: for a random walk simulation to be appropriate, the distribution
-    # of move deltas should be independent of the number of available moves.
-    # To test this we should log the deltas for each possible number of
-    # available moves, and compare the distributions.
+    # Log the deltas for each possible number of
+    # available moves ("position"), and compare the distributions.
     # deltasByPosition should be a defaultdict:
     # deltasByPosition = defaultdict(list), then dbp[n].append(delta)
     # keys = number n of moves available,
-    # deltasByPosition[n] = list of deltas for that n
+    # deltasByPosition[n] = list of deltas for that number n of moves available
+    #
+    # meanHeights is a dict whose [n] value is a list. The list has one element
+    # for each time there were n moves available.  This element is the mean
+    # height of all the moves available at that time.
     scores = []
     lengths = []
     deltaMovesAvailable = []
@@ -241,6 +243,7 @@ def testStrategy(chooser, numberOfGames):
     chains = []
     allMovesAvailable = []
     deltasByPosition = defaultdict(list)
+    meanHeightMovesAvailableByPosition = defaultdict(list)
     for i in range(numberOfGames):
         b = board()
         b.randomize()
@@ -262,18 +265,21 @@ def testStrategy(chooser, numberOfGames):
                 maxMovesAvailable.append(max(movesAvailableThisGame))
                 allMovesAvailable += movesAvailableThisGame
                 break
+            # the break lets us assume numberOfAvailableMoves != 0
+            meanHeight = sum([x[0][0] for x in moves]) / (1.0 * numberOfAvailableMoves)
+            meanHeightMovesAvailableByPosition[numberOfAvailableMoves].append(meanHeight)
             b.applyMove(chooser(moves))
             b.numberOfTurns += 1
 
     statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
-                  maxMovesAvailable, deltasByPosition, chains, allMovesAvailable)
+                  maxMovesAvailable, deltasByPosition, chains, allMovesAvailable, meanHeightMovesAvailableByPosition)
 
 
 def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
-                  maxMovesAvailable, deltasByPosition, chains, allMovesAvailable):
+                  maxMovesAvailable, deltasByPosition, chains, allMovesAvailable, meanHeightMovesAvailableByPosition):
     # Produce plots and statistics, write them to disk in a sensible manner
     #
-    # Note: scipy.stats.kurtosis produces the excess kurtosis by default
+    # Note: scipy.stats.kurtosis produces the *excess* kurtosis by default
 
     ##################################
     # create a directory for writing #
@@ -448,6 +454,20 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     print op
     f.write(op + '\n')
 
+    ################
+    # move heights #
+    ################
+
+    means = []
+    for k in meanHeightMovesAvailableByPosition.keys():
+        mn = stat.tmean(meanHeightMovesAvailableByPosition[k])
+        means.append(mn)
+
+    plt.scatter(meanHeightMovesAvailableByPosition.keys(), means)
+    plt.title("x = number of moves avail, y = mean height of moves avail")
+    plt.savefig(pat + "/heightMovesAvailByPosn.svg", format='svg')
+    plt.show()
+
     f.close()
 
     ############
@@ -469,6 +489,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     pick("maxes", maxMovesAvailable)
     pick("deltas by posn", deltasByPosition)
     pick("allMovesAvailable", allMovesAvailable)
+    pick("height by position", meanHeightMovesAvailableByPosition)
 
 
 ##########################
@@ -522,17 +543,17 @@ def chooseLastHighest(moves):
     return highestMoves[-1]
 
 
-def chooseBottom5(moves):
-    # pick randomly from the 5 moves nearest the bottom
+def chooseBottom3(moves):
+    # pick randomly from the 3 moves nearest the bottom
     movesSortedByRow = sorted(moves, key=lambda x: x[0][0])
-    return random.choice(movesSortedByRow[-5:])
+    return random.choice(movesSortedByRow[-1:])
 
 
 ##################################
 # run the test, plot the results #
 ##################################
 
-testStrategy(chooseFromHighest, 5)
+testStrategy(chooseBottom3, 5000)
 
 
 # # export scores data in R-readable format
@@ -542,13 +563,3 @@ testStrategy(chooseFromHighest, 5)
 # # use source("scores.txt") in R to load this
 # f.write(r_string)
 # f.close()
-
-# mean ~150 for top 3, ~120 for top 5, ~195 for top 2, ~310 for top 1.
-# but chooseFromHighest seems to be smaller (weak evidence: n=10000,
-# mean=299.2, sd = 276.2)
-# chooseLastHighest: n 10000 mean 299.3363 sd 271.212
-# another 10000 run of rightmost gave mean 302.7, sd 276.12
-# another 10000 run of top1 gave mean 314.4482, sd 289.886
-# It isn't a problem that chooseLastHighest does worse than chooseTop1:
-# it isn't picking the rightmost move, because top1 tends to do
-# horizontal monos first
