@@ -401,7 +401,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     plt.savefig(pat + "/skewness.svg", format='svg')
     plt.show()
 
-    plt.hist(deltaMovesAvailable, density=True, bins=50)
+    plt.hist(deltaMovesAvailable, density=True, bins=range(min(deltaMovesAvailable) - 2, max(deltaMovesAvailable) + 2))
     plt.title("available move deltas overall")
     plt.savefig(pat + "/available_move_deltas.svg", format='svg')
     plt.show()
@@ -415,7 +415,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     # initial, max, all numbers of moves available, chain reactions #
     #################################################################
 
-    plt.hist(initialMovesAvailable, density=True, bins=50)
+    plt.hist(initialMovesAvailable, density=True, bins=range(max(initialMovesAvailable) + 2))
     plt.title("initial number of moves available")
     plt.savefig(pat + "/initialMovesAvailable.svg", format='svg')
     plt.show()
@@ -424,7 +424,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     print op
     f.write(op + '\n')
 
-    plt.hist(maxMovesAvailable, bins=50)
+    plt.hist(maxMovesAvailable, bins=range(max(maxMovesAvailable) + 2))
     plt.title("max number moves available")
     plt.savefig(pat + "/maxMovesAvailable.svg", format='svg')
     plt.show()
@@ -433,7 +433,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     print op
     f.write(op + '\n')
 
-    plt.hist(chains, bins=15, density=True)
+    plt.hist(chains, bins=range(max(chains) + 2), density=True, align="left")
     plt.title("number of chain reactions caused")
     plt.savefig(pat + "/chains.svg", format='svg')
     plt.show()
@@ -446,7 +446,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     print op
     f.write(op + '\n')
 
-    plt.hist(allMovesAvailable, bins=40, density=True)
+    plt.hist(allMovesAvailable, bins=range(max(allMovesAvailable) + 2), density=True)
     plt.title("number of moves available")
     plt.savefig(pat + "/allMovesAvailable.svg", format='svg')
     plt.show()
