@@ -320,7 +320,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
 
     plt.scatter(lengths, scores)
     plt.title("lengths vs scores")
-    plt.savefig(pat + "/lengthsVscores.svg", format='svg')
+    plt.savefig(pat + "/lengthsVscores.svg", format='jpg')
     plt.show()
 
     op = "sample corr coeff lengths-scores " + str(stat.pearsonr(lengths, scores))
