@@ -19,10 +19,11 @@ vanishLength = 3  # a collection of at least vanishLength blocks of the same
 # colour in a vertical or horizontal line is called a mono.
 
 
-class board:
-    score = 0
-    entries = [[0 for i in range(width)] for j in range(height)]
-    numberOfTurns = 0
+class board(object):
+    def __init__(self):
+        self.score = 0
+        self.entries = [[0 for i in range(width)] for j in range(height)]
+        self.numberOfTurns = 0
 
     # the nump branch in github shows what happens if you store the entries
     # in a numpy array of ints - it's slower by a factor of nearly 2
@@ -553,7 +554,7 @@ def chooseBottom3(moves):
 # run the test, plot the results #
 ##################################
 
-testStrategy(chooseBottom3, 5000)
+testStrategy(chooseBottom3, 50)
 
 
 # # export scores data in R-readable format

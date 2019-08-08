@@ -62,7 +62,8 @@ we tend to end up with fewer moves available on the next move (mean
 decrease is about 1.6). The distributions have a similar character to
 the [Ehrenfest model](https://en.wikipedia.org/wiki/Ehrenfest_model) or
 the drunk-in-a-valley random walk.  The next plot gives a clearer view
-of the expected change in number of moves available:
+of the expected change in number of moves available (i.e. this plot is E(&delta;<sub>t |
+X<sub>t</sub>=x) versus x):
 
 ![mean change in number of moves available versus number of moves
 available](https://raw.githubusercontent.com/silverfish7070/jewels/master/position_vs_expected_jump.svg?sanitize=true)
