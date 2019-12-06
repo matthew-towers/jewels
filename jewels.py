@@ -9,33 +9,33 @@ import pickle
 import os
 from datetime import datetime
 
-# global game parameters. The rockbox jewels game has width=height=8,
-# numberOfColours=7, vanishLength=3
-width = 8
-height = 8
-numberOfColours = 7  # block colours will be represented by the numbers
-# 1,2,...,numberOfColours, with 0 being an empty square
-vanishLength = 3  # a collection of at least vanishLength blocks of the same
-# colour in a vertical or horizontal line is called a mono.
-
 
 class board(object):
-    def __init__(self):
+    def __init__(self, width=8, height=8, numberOfColours=7, vanishLength=3):
+        # The rockbox jewels game has width=height=8, numberOfColours=7,
+        # vanishLength = 3
+        # Coloured blocks are represented by 1, 2, ..., numberOfColours
+        # 0 represents an empty space
+        self.width = width
+        self.height = height
+        self.numberOfColours = numberOfColours
+        self.vanishLength = vanishLength  # at least vanishLength consectuive blocks of the same
+        # colour in a horizontal or vertical line is called a mono
         self.score = 0
-        self.entries = [[0 for i in range(width)] for j in range(height)]
+        self.entries = [[0 for i in range(self.width)] for j in range(self.height)]
         self.numberOfTurns = 0
 
     # the nump branch in github shows what happens if you store the entries
     # in a numpy array of ints - it's slower by a factor of nearly 2
 
-    def printEntries(self):  # only for <10 colours
-        for j in range(height):
+    def printEntries(self):  # only for < 10 colours
+        for j in range(self.height):
             print " ".join(map(str, self.entries[j]))
 
     def randomize(self):
-        for i in range(width):
-            for j in range(height):
-                self.entries[j][i] = random.randint(1, numberOfColours)
+        for i in range(self.width):
+            for j in range(self.height):
+                self.entries[j][i] = random.randint(1, self.numberOfColours)
 
     def findMonos(self):
         # return a list whose elements correspond to the maximal monos
@@ -47,55 +47,55 @@ class board(object):
         # twice...(but it turns out to be a lot slower in numpy)
         output = []
         # first, the horizontal monos
-        for i in range(height):
+        for i in range(self.height):
             row = self.entries[i]
             currentColour = row[0]
             currentStreakStart = 0
-            for j in range(1, width):
+            for j in range(1, self.width):
                 if row[j] != currentColour:
-                    if j - currentStreakStart >= vanishLength:
+                    if j - currentStreakStart >= self.vanishLength:
                         output.append([[i, x] for x in
                                        range(currentStreakStart, j)])
                     currentColour = row[j]
                     currentStreakStart = j
-            # we hit the last entry, j=width. Was it the last entry of a
+            # we hit the last entry, j=self.width. Was it the last entry of a
             # mono? if so, append it.
-            if width - currentStreakStart >= vanishLength:
+            if self.width - currentStreakStart >= self.vanishLength:
                 output.append([[i, x] for x in
-                               range(currentStreakStart, width)])
+                               range(currentStreakStart, self.width)])
         # now the vertical monos
-        for j in range(width):
+        for j in range(self.width):
             currentColour = self.entries[0][j]
             currentStreakStart = 0
-            for i in range(1, height):
+            for i in range(1, self.height):
                 if self.entries[i][j] != currentColour:
-                    if i - currentStreakStart >= vanishLength:
+                    if i - currentStreakStart >= self.vanishLength:
                         output.append([[x, j] for x in
                                        range(currentStreakStart, i)])
                     currentColour = self.entries[i][j]
                     currentStreakStart = i
             # we hit the last entry of the column, was it the last entry
             # of a mono? if so, append it to output
-            if height - currentStreakStart >= vanishLength:
+            if self.height - currentStreakStart >= self.vanishLength:
                 output.append([[x, j] for x in
-                               range(currentStreakStart, height)])
+                               range(currentStreakStart, self.height)])
 
         return output
 
     def gravity(self):
-        for j in range(width):
+        for j in range(self.width):
             col = [self.entries[i][j] for i in
-                   range(height) if self.entries[i][j] != 0]
-            newcol = [0 for x in range(height - len(col))] + col
+                   range(self.height) if self.entries[i][j] != 0]
+            newcol = [0 for x in range(self.height - len(col))] + col
             # make the first col equal to newcol
-            for i in range(height):
+            for i in range(self.height):
                 self.entries[i][j] = newcol[i]
 
     def randomFillZeroes(self):
-        for i in range(height):
-            for j in range(width):
+        for i in range(self.height):
+            for j in range(self.width):
                 if self.entries[i][j] == 0:
-                    self.entries[i][j] = random.randint(1, numberOfColours)
+                    self.entries[i][j] = random.randint(1, self.numberOfColours)
 
     def evolve(self):
         # repeat:
@@ -106,11 +106,11 @@ class board(object):
         # until there are no more monos.
         # return the number of chain reactions caused
         chains = -1
-        while len(self.findMonos()) != 0:
+        while self.findMonos(): # i.e. while it is nonempty
             chains += 1
             monos = self.findMonos()
             for m in monos:
-                self.score += len(m) - vanishLength + 1
+                self.score += len(m) - self.vanishLength + 1
                 for x in m:
                     self.entries[x[0]][x[1]] = 0
             self.gravity()
@@ -123,7 +123,7 @@ class board(object):
         colour = self.entries[coords[0]][coords[1]]
         ll = 0
         while True:
-            if ((coords[1] + ll >= width) or
+            if ((coords[1] + ll >= self.width) or
                     (self.entries[coords[0]][coords[1] + ll] != colour)):
                 break
             else:
@@ -135,7 +135,7 @@ class board(object):
                 break
             else:
                 r += 1
-        return ll + r - 1 >= vanishLength
+        return ll + r - 1 >= self.vanishLength
 
     def verticalMonoContaining(self, coords):
         # does self.entries contain a vertical mono containing the entry
@@ -143,7 +143,7 @@ class board(object):
         colour = self.entries[coords[0]][coords[1]]
         d = 0
         while True:
-            if ((coords[0] + d >= height) or
+            if ((coords[0] + d >= self.height) or
                     (self.entries[coords[0] + d][coords[1]] != colour)):
                 break
             else:
@@ -155,7 +155,7 @@ class board(object):
                 break
             else:
                 u += 1
-        return u + d - 1 >= vanishLength
+        return u + d - 1 >= self.vanishLength
 
     def legitMoves(self):
         # Moves swap two entries which are adjacent horizontally or vertically.
@@ -164,9 +164,9 @@ class board(object):
         # of coordinates, and the number of legitimate moves.
         numberLegitMoves = 0
         listOfMoves = []
-        for i in range(height):
-            for j in range(width):
-                if (j < width - 1) and (self.entries[i][j] !=
+        for i in range(self.height):
+            for j in range(self.width):
+                if (j < self.width - 1) and (self.entries[i][j] !=
                    self.entries[i][j + 1]):
                     # it makes sense to swap [i,j] and [i,j+1]. does that
                     #  create a new mono?
@@ -187,7 +187,7 @@ class board(object):
                         listOfMoves.append([[i, j], [i, j + 1]])
                     self.applyMove([[i, j], [i, j + 1]])  # get self.entries
                     # back to where it was before
-                if ((i < height - 1) and
+                if ((i < self.height - 1) and
                         (self.entries[i][j] != self.entries[i + 1][j])):
                     # it makes sense to swap [i,j] and [i+1,j]. does that
                     # create a new mono?
@@ -256,12 +256,10 @@ def testStrategy(chooser, numberOfGames):
             if numberOfAvailableMoves == 0:
                 scores.append(b.score)
                 lengths.append(b.numberOfTurns)
-                deltas = [movesAvailableThisGame[i + 1] -
-                          movesAvailableThisGame[i]
-                          for i in range(len(movesAvailableThisGame) - 1)]
+                deltas = [movesAvailableThisGame[ii + 1] - movesAvailableThisGame[ii] for ii in range(len(movesAvailableThisGame) - 1)]
                 deltaMovesAvailable += deltas
-                for i in range(len(movesAvailableThisGame) - 1):
-                    deltasByPosition[movesAvailableThisGame[i]].append(deltas[i])
+                for iii in range(len(movesAvailableThisGame) - 1):
+                    deltasByPosition[movesAvailableThisGame[iii]].append(deltas[iii])
                 initialMovesAvailable.append(movesAvailableThisGame[0])
                 maxMovesAvailable.append(max(movesAvailableThisGame))
                 allMovesAvailable += movesAvailableThisGame
@@ -319,7 +317,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
     print(op)
     f.write(op + "\n")
 
-    plt.scatter(lengths, scores)
+    plt.scatter(lengths, scores, s=1.5, marker=".")
     plt.title("lengths vs scores")
     plt.savefig(pat + "/lengthsVscores.svg", format='jpg')
     plt.show()
@@ -464,7 +462,7 @@ def statsAndPlots(scores, lengths, deltaMovesAvailable, initialMovesAvailable,
         mn = stat.tmean(meanHeightMovesAvailableByPosition[k])
         means.append(mn)
 
-    plt.scatter(meanHeightMovesAvailableByPosition.keys(), means)
+    plt.scatter(meanHeightMovesAvailableByPosition.keys(), means, s=1, marker=".")
     plt.title("x = number of moves avail, y = mean height of moves avail")
     plt.savefig(pat + "/heightMovesAvailByPosn.svg", format='svg')
     plt.show()
@@ -554,7 +552,7 @@ def chooseBottom3(moves):
 # run the test, plot the results #
 ##################################
 
-testStrategy(chooseBottom3, 50)
+testStrategy(randomChooser, 100)
 
 
 # # export scores data in R-readable format
