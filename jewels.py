@@ -218,7 +218,7 @@ class board(object):
         # mixed
         # approximate the play that maximises something or other
 
-def testStrategy(chooser, numberOfGames):
+def testStrategy(chooser, numberOfGames, width=8, height=8, numberOfColours=7):
     # a strategy is a way of choosing moves. testStrategy takes
     # a function `chooser' which accepts a list of moves and returns
     # one of them, and a number numberOfGames, and runs numberOfGames
@@ -246,7 +246,7 @@ def testStrategy(chooser, numberOfGames):
     deltasByPosition = defaultdict(list)
     meanHeightMovesAvailableByPosition = defaultdict(list)
     for i in range(numberOfGames):
-        b = board()
+        b = board(width, height, numberOfColours)
         b.randomize()
         movesAvailableThisGame = []
         while True:
@@ -545,14 +545,20 @@ def chooseLastHighest(moves):
 def chooseBottom3(moves):
     # pick randomly from the 3 moves nearest the bottom
     movesSortedByRow = sorted(moves, key=lambda x: x[0][0])
-    return random.choice(movesSortedByRow[-1:])
+    return random.choice(movesSortedByRow[-3:])
+
+
+def chooseBottom1(moves):
+    # pick randomly from the 3 moves nearest the bottom
+    movesSortedByRow = sorted(moves, key=lambda x: x[0][0])
+    return movesSortedByRow[-1]
 
 
 ##################################
 # run the test, plot the results #
 ##################################
 
-testStrategy(randomChooser, 100)
+testStrategy(chooseBottom1, 5000, width=8, height=8, numberOfColours=8)
 
 
 # # export scores data in R-readable format
